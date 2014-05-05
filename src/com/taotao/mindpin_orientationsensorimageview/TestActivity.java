@@ -18,6 +18,9 @@ public class TestActivity extends Activity{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.acitivty_test);
 		sensorView = (OrientationSensorImageView) findViewById(R.id.sensorview);
+		sensorView.setImageResource(R.drawable.qingmin);
+		sensorView.setMoveStepDuration(35);
+		sensorView.setLeanFactor(0.45f);
 	}
 	
 	

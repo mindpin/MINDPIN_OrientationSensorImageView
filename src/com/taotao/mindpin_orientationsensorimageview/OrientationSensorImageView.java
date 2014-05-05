@@ -13,7 +13,7 @@ import android.widget.ImageView;
 /**
  * 
  * @author taotao
- *
+ * 注意：OrientationSensorImageView 不能作为layout的根视图。
  */
 public class OrientationSensorImageView extends ImageView implements SensorEventListener{
 	private static String TAG = "OrientationSensorImageView";
@@ -77,8 +77,8 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 			int bottom) {
 		super.onLayout(changed, left, top , right, bottom );
 		Log.d(TAG , "onLayout >>>> "+ changed + " --  " + left + " / " + top + "   " + right + " / " + bottom + "   ");
-		rightBorder = right - moveStepDis - width;
-		leftBorder = left + moveStepDis;
+		rightBorder = right - width;
+		leftBorder = left ;
 		int sX = 0, sY = 0;
 		if(width < (right - left)){
 			sX = ((right - left) - width)/2 + left;
@@ -117,7 +117,7 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 	public void pause(){ 
 		// 取消注册  
         mSensorManager.unregisterListener(this);  
-        if(isMove()) moveObort();
+        if(mDerection != DERECTION.STOP) moveObort();
 	}
 
 	@Override
@@ -126,8 +126,10 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 		Log.d(TAG, "onAccuracyChanged : " + accuracy);
 	}
 	
-	
-    private int MIN_SENSOR_DRGREE = 10;//移动的最小倾斜度
+	/**
+	 * 感应到的最小倾斜度
+	 */
+    private int MIN_SENSOR_DRGREE = 5;//
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		// TODO Auto-generated method stub
@@ -145,78 +147,112 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
             //float xAngle = values[1];
             // 获取与Y轴的夹角  
             float yAngle = values[2];
-            if(Math.abs(yAngle) < MIN_SENSOR_DRGREE){
-            	if(isMove()) moveObort();
+            float absYAngle = Math.abs(yAngle);
+            if(absYAngle < MIN_SENSOR_DRGREE){
+            	if(mDerection != DERECTION.STOP) moveObort();
             	return;
             }
             
+            moveStepDis = (int)((absYAngle - MIN_SENSOR_DRGREE)*leanFactor);
+            
             if(yAngle > 0){//右边高
-            	if(!isMove())moveToRight();
+            	if(mDerection != DERECTION.RIGHT)moveToRight();
             }else{//左边高
-            	if(!isMove())moveToLeft();
+            	if(mDerection != DERECTION.LEFT)moveToLeft();
             }
             // 通知系统重绘View  
            //invalidate();
             break;  
-        }  
-		
+        }
 		
 	}
 	
-	private int moveStepDis = 10;//每步移动的距离
-	private int moveStepDuration = 50;//每步移动的时间间隔
+	public enum DERECTION{STOP, LEFT, RIGHT};
+	private DERECTION mDerection = DERECTION.STOP;
+	
+	/**
+	 * 倾斜系数调整：倾斜角和moveStepDis的倍数关系
+	 */
+	private float leanFactor = 0.5f;//
+	/**
+	 * 每步移动的距离
+	 */
+	private int moveStepDis = 10;//
+	/**
+	 * 每步移动的时间间隔
+	 */
+	private int moveStepDuration = 30;//
 	
 	Handler mHandler = new Handler(){
 		public void handleMessage(android.os.Message msg) {
 			//Log.i(TAG, "scrollX = " + getScrollX());
 			switch (msg.what) {
-			case 0:
-				if(getScrollX() > leftBorder) {
+			case 0://---LEFT---
+				if(getScrollX() > (leftBorder + moveStepDis)) {
 					scrollBy(-moveStepDis, 0);
-					if(isMove) mHandler.sendEmptyMessageDelayed(0, moveStepDuration);
+					if(mDerection == DERECTION.LEFT) mHandler.sendEmptyMessageDelayed(0, moveStepDuration);
 				}else{
-					moveObort();
+					scrollTo(leftBorder, 0);
+					//moveObort();
+					
 				}
 				break;
 
-			case 1:
-				if(getScrollX() < rightBorder) {
+			case 1://---RIGHT---
+				if(getScrollX() < (rightBorder - moveStepDis)) {
 					scrollBy(moveStepDis, 0);
-					if(isMove) mHandler.sendEmptyMessageDelayed(1, moveStepDuration);
+					if(mDerection == DERECTION.RIGHT) mHandler.sendEmptyMessageDelayed(1, moveStepDuration);
 				}else{
-					moveObort();
+					scrollTo(rightBorder, 0);
+					//moveObort();
 				}
 				break;
 			}
 		};
 	};
 	
-	private boolean isMove;
+	//private boolean isMove;
 	private void moveToLeft(){
-		isMove = true;
+		Log.d(TAG, "--moveToLeft--");
+		//isMove = true;
+		mDerection = DERECTION.LEFT;
 		mHandler.sendEmptyMessageDelayed(0, moveStepDuration);
 	}
 	
 	
 	private void moveToRight(){
-		isMove = true;
+		Log.d(TAG, "--moveToRight--");
+		//isMove = true;
+		mDerection = DERECTION.RIGHT;
         mHandler.sendEmptyMessageDelayed(1, moveStepDuration);
 	}
 	
 	private void moveObort(){
-		isMove = false;
+		Log.d(TAG, "===moveObort===");
+		//isMove = false;
+		mDerection = DERECTION.STOP;
 		mHandler.removeMessages(0);
 		mHandler.removeMessages(1);
 	}
 	
-	public boolean isMove() {
+	/*public boolean isMove() {
 		return isMove;
+	}*/
+	
+	
+	/**
+	 * 调整移动速度
+	 * @param leanFactor 倾斜系数调整：倾斜角和moveStepDis的倍数关系
+
+	 */
+	public void setLeanFactor(float leanFactor) {
+		this.leanFactor = leanFactor;
 	}
 	
-	public void setMoveStepDis(int moveStepDis) {
-		this.moveStepDis = moveStepDis;
-	}
-	
+	/**
+	 * 调整移动平滑度
+	 * @param moveStepDuration
+	 */
 	public void setMoveStepDuration(int moveStepDuration) {
 		this.moveStepDuration = moveStepDuration;
 	}
