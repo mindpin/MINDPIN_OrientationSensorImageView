@@ -9,14 +9,35 @@ import android.hardware.SensorManager;
 import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.MotionEvent;
+import android.view.VelocityTracker;
+import android.view.ViewConfiguration;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
+import android.widget.Scroller;
 /**
  * 
  * @author taotao
- * ×¢Òâ£ºOrientationSensorImageView ²»ÄÜ×÷ÎªlayoutµÄ¸ùÊÓÍ¼¡£
+ * æ³¨æ„ï¼šOrientationSensorImageView ä¸èƒ½ä½œä¸ºlayoutçš„æ ¹è§†å›¾ã€‚
  */
 public class OrientationSensorImageView extends ImageView implements SensorEventListener{
 	private static String TAG = "OrientationSensorImageView";
+	private enum ScaleHeightType{
+		/**
+		 * å½“å›¾ç‰‡é«˜åº¦å¤§äºæˆ–è€…ç­‰äºç»„ä»¶å½“å‰é«˜åº¦æ—¶ï¼Œä¸å¯¹å›¾ç‰‡åšç¼©æ”¾å¤„ç†<br/>
+         * å½“å›¾ç‰‡é«˜åº¦å°äºç»„ä»¶å½“å‰é«˜åº¦æ—¶ï¼Œç­‰æ¯”ä¾‹ç¼©æ”¾å›¾ç‰‡å®½é«˜ï¼Œä½¿å›¾ç‰‡é«˜åº¦ç­‰äºç»„ä»¶å½“å‰é«˜åº¦ 
+		 */
+		StrentchHeight, 
+		/**
+		 * å½“å›¾ç‰‡é«˜åº¦å°äºæˆ–è€…ç­‰äºç»„ä»¶å½“å‰é«˜åº¦æ—¶ï¼Œä¸å¯¹å›¾ç‰‡åšç¼©æ”¾å¤„ç†<br/>
+         * å½“å›¾ç‰‡é«˜åº¦å¤§äºç»„ä»¶å½“å‰é«˜åº¦æ—¶ï¼Œç­‰æ¯”ä¾‹ç¼©æ”¾å›¾ç‰‡å®½é«˜ï¼Œä½¿å›¾ç‰‡é«˜åº¦ç­‰äºç»„ä»¶å½“å‰é«˜åº¦
+		 */
+		CompressHeight,
+		/**
+		 * æ€»ç­‰æ¯”ä¾‹ç¼©æ”¾å›¾ç‰‡å®½é«˜ï¼Œä½¿å›¾ç‰‡é«˜åº¦ç­‰äºç»„ä»¶å½“å‰é«˜åº¦
+		 */
+		FitHeight}
+	private ScaleHeightType shType = ScaleHeightType.CompressHeight;
 
 	public OrientationSensorImageView(Context context, AttributeSet attrs,
 			int defStyle) {
@@ -33,7 +54,6 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 	
 	public OrientationSensorImageView(Context context) {
 		super(context);
-		// TODO Auto-generated constructor stub
 		init();
 	}
 	
@@ -57,12 +77,33 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 			float rationW = (float)width/drawWidth;
 			float rationH = (float)height/drawHeight;
 			//LogUtil.d(this, " rationW = " + rationW + " rationH = " + rationH);
-			if(rationW * drawHeight > height){
+			switch (shType) {
+			case CompressHeight:
+				if(drawHeight > height){
+					setMeasuredDimension((int)(rationH * drawWidth), height);
+					//super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+				}else{
+					setMeasuredDimension(drawWidth, drawHeight);
+					//super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+				}
+				break;
+
+			case StrentchHeight:
+				
+				break;
+				
+			case FitHeight:
+				
+				break;
+			}
+			
+			
+			
+			/*if(rationW * drawHeight > height){
 				setMeasuredDimension(width, (int)(rationW * drawHeight));
 			}else{
 				setMeasuredDimension((int)(rationH * drawWidth), height);
-			}
-			
+			}*/
 		}else{
 			super.onMeasure(widthMeasureSpec, heightMeasureSpec);
 		}
@@ -70,16 +111,22 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 	}
 	
 	
-	private int rightBorder, leftBorder;//moveµÄ×óÓÒ±ß½ç
+	private int rightBorder, leftBorder;//moveçš„å·¦å³è¾¹ç•Œ
+	private boolean isListenerOrientation = true;
 	
 	@Override
-	protected void onLayout(boolean changed, int left, int top, int right,
-			int bottom) {
+	protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
 		super.onLayout(changed, left, top , right, bottom );
 		Log.d(TAG , "onLayout >>>> "+ changed + " --  " + left + " / " + top + "   " + right + " / " + bottom + "   ");
 		rightBorder = right - width;
 		leftBorder = left ;
 		int sX = 0, sY = 0;
+		if(width >= (right - left)){
+			isListenerOrientation = false;
+			// å–æ¶ˆæ³¨å†Œ  
+	        mSensorManager.unregisterListener(this);
+		}
+		
 		if(width < (right - left)){
 			sX = ((right - left) - width)/2 + left;
 		}
@@ -87,38 +134,169 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 		if((bottom - top) > height){
 			sY = ((bottom - top) - height)/2 + top;
 		}
-		
-		scrollTo(sX, sY);
+		Log.d(TAG, "sX = " + sX + " sY = " + sY);
+		//scrollTo(sX, sY);
 		invalidate();
 	}
+	
+	private VelocityTracker mVelocityTracker ;
+	private float mLastMotionX;
+	private boolean isTouching, isFling;
+	@Override
+	public boolean onTouchEvent(MotionEvent ev) {
+		if(!isListenerOrientation) return super.onTouchEvent(ev);
+		initVelocityTrackerIfNotExists();
+		mVelocityTracker.addMovement(ev);
+        int action = ev.getAction();
+        float currentX = ev.getX();
+        Log.v(TAG, "action = " + action);
+        switch (action) {
+		case MotionEvent.ACTION_DOWN:
+			isTouching = true;
+			mLastMotionX = (int) ev.getX();
+			if(!mScoller.isFinished()) mScoller.abortAnimation();
+			moveObort();
+			break;
+
+		case MotionEvent.ACTION_MOVE:
+			float moveX = mLastMotionX - currentX;
+			mLastMotionX = currentX;
+			float scrollPos = getScrollX() + moveX;
+			if(scrollPos < leftBorder) {
+				scrollTo(leftBorder, 0);
+			}else if(scrollPos > rightBorder){
+				scrollTo(rightBorder, 0);
+			}else{
+				scrollTo((int)scrollPos, 0);
+			}
+			break;
+			
+			
+		case MotionEvent.ACTION_UP:
+			final VelocityTracker velocityTracker = mVelocityTracker;
+            velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
+            int initialVelocitX = (int) velocityTracker.getXVelocity();
+            Log.d(TAG, "initialVelocity = " + initialVelocitX);
+            
+            if ((Math.abs(initialVelocitX) > mMinimumVelocity)) {
+            	Log.i(TAG, "---fling---startX = " + getScrollX() + " leftBorder = " + leftBorder + " rightBorder = " + rightBorder);
+            	isFling = true;
+            	mScoller.fling((int)getScrollX() , 0, -initialVelocitX, 0, leftBorder, rightBorder, 0, 0);
+            	invalidate();
+            } else {
+            	isFling = false;
+               isTouching = false;
+            }
+            
+			break;
+			
+		case MotionEvent.ACTION_CANCEL:
+			
+			
+			break;
+		}
+		
+		return true;
+	}
+	
+	
+	@Override
+	public void computeScroll() {
+		// TODO Auto-generated method stub
+		
+		if(mScoller.computeScrollOffset()){
+			Log.d(TAG, "computeScroll: x = " + mScoller.getCurrX() + " y = " + mScoller.getCurrY());
+			scrollTo(mScoller.getCurrX(), 0);
+			postInvalidate();
+		}else{
+			super.computeScroll();
+			if(isFling) {
+				isTouching = false;
+				isFling = false;
+			}
+			Log.i(TAG, "computeScroll:finished x = " + getScrollX() + " y = " + getScrollY());
+		}
+		
+		
+	}
+	
+	
+	
+	
+	private void initOrResetVelocityTracker() {
+        if (mVelocityTracker == null) {
+            mVelocityTracker = VelocityTracker.obtain();
+        } else {
+            mVelocityTracker.clear();
+        }
+    }
+
+    private void initVelocityTrackerIfNotExists() {
+        if (mVelocityTracker == null) {
+            mVelocityTracker = VelocityTracker.obtain();
+        }
+    }
+
+    private void recycleVelocityTracker() {
+        if (mVelocityTracker != null) {
+            mVelocityTracker.recycle();
+            mVelocityTracker = null;
+        }
+    }
 	
 	
 	private SensorManager mSensorManager;
 	
+	private HorizontalScrollView hsv;
+	private int mTouchSlop;
+    private int mMinimumVelocity;
+    private int mMaximumVelocity;
+
+    //private int mOverscrollDistance;
+    //private int mOverflingDistance;
+    
+    private Scroller mScoller;
+    
 	private void init(){
-		// »ñÈ¡Õæ»úµÄ´«¸ĞÆ÷¹ÜÀí·şÎñ 
+		// è·å–çœŸæœºçš„ä¼ æ„Ÿå™¨ç®¡ç†æœåŠ¡ 
 		mSensorManager = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
+		//hsv = getParent().getParent()
 		
+		final ViewConfiguration configuration = ViewConfiguration.get(getContext());
+        mTouchSlop = configuration.getScaledTouchSlop();
+        mMinimumVelocity = configuration.getScaledMinimumFlingVelocity();
+        mMaximumVelocity = configuration.getScaledMaximumFlingVelocity();
+        //mOverscrollDistance = configuration.getScaledOverscrollDistance();
+        //mOverflingDistance = configuration.getScaledOverflingDistance();
+        mScoller = new Scroller(getContext());
 	}
 	
 	/**
-	 * ÔÚActivity onResume()Ê±µ÷ÓÃ
+	 * åœ¨Activity onResume()æ—¶è°ƒç”¨
 	 */
 	public void resume(){
-		// ÎªÏµÍ³µÄ·½Ïò´«¸ĞÆ÷×¢²á¼àÌıÆ÷  
-        mSensorManager.registerListener(this,
-        		mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),  
-                SensorManager.SENSOR_DELAY_UI); 
+		// ä¸ºç³»ç»Ÿçš„æ–¹å‘ä¼ æ„Ÿå™¨æ³¨å†Œç›‘å¬å™¨  
+		if(isListenerOrientation){
+			mSensorManager.registerListener(this,
+	        		mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION),  
+	                SensorManager.SENSOR_DELAY_UI);
+		}
+         
 	}
 	
 	/**
-	 * ÔÚActivity onPause()Ê±µ÷ÓÃ
+	 * åœ¨Activity onPause()æ—¶è°ƒç”¨
 	 */
 	public void pause(){ 
-		// È¡Ïû×¢²á  
-        mSensorManager.unregisterListener(this);  
-        if(mDerection != DERECTION.STOP) moveObort();
+		// å–æ¶ˆæ³¨å†Œ  
+		if(isListenerOrientation){
+			mSensorManager.unregisterListener(this);  
+	        if(mDerection != DERECTION.STOP) moveObort();
+	        recycleVelocityTracker();
+		}
+        
 	}
+	
 
 	@Override
 	public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -127,25 +305,25 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 	}
 	
 	/**
-	 * ¸ĞÓ¦µ½µÄ×îĞ¡ÇãĞ±¶È
+	 * æ„Ÿåº”åˆ°çš„æœ€å°å€¾æ–œåº¦
 	 */
     private int MIN_SENSOR_DRGREE = 5;//
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		// TODO Auto-generated method stub
 		//Log.d(TAG, "---onSensorChanged---");
-		
+		if(isTouching) return;
 		float[] values = event.values;  
-        // Õæ»úÉÏ»ñÈ¡´¥·¢µÄ´«¸ĞÆ÷ÀàĞÍ  
+        // çœŸæœºä¸Šè·å–è§¦å‘çš„ä¼ æ„Ÿå™¨ç±»å‹  
         int sensorType = event.sensor.getType();
         switch (sensorType) {  
         case Sensor.TYPE_ORIENTATION:
         	//Log.v(TAG, "x = " + values[0] + " y = " + values[1] + " z = " + values[2]);
-        	// »ñÈ¡ÓëZÖáµÄ¼Ğ½Ç  
+        	// è·å–ä¸Zè½´çš„å¤¹è§’  
             //float zAngle = values[0];
-            // »ñÈ¡ÓëXÖáµÄ¼Ğ½Ç  
+            // è·å–ä¸Xè½´çš„å¤¹è§’  
             //float xAngle = values[1];
-            // »ñÈ¡ÓëYÖáµÄ¼Ğ½Ç  
+            // è·å–ä¸Yè½´çš„å¤¹è§’  
             float yAngle = values[2];
             float absYAngle = Math.abs(yAngle);
             if(absYAngle < MIN_SENSOR_DRGREE){
@@ -155,12 +333,12 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
             
             moveStepDis = (int)((absYAngle - MIN_SENSOR_DRGREE)*leanFactor);
             
-            if(yAngle > 0){//ÓÒ±ß¸ß
+            if(yAngle > 0){//å³è¾¹é«˜
             	if(mDerection != DERECTION.RIGHT)moveToRight();
-            }else{//×ó±ß¸ß
+            }else{//å·¦è¾¹é«˜
             	if(mDerection != DERECTION.LEFT)moveToLeft();
             }
-            // Í¨ÖªÏµÍ³ÖØ»æView  
+            // é€šçŸ¥ç³»ç»Ÿé‡ç»˜View  
            //invalidate();
             break;  
         }
@@ -171,15 +349,15 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 	private DERECTION mDerection = DERECTION.STOP;
 	
 	/**
-	 * ÇãĞ±ÏµÊıµ÷Õû£ºÇãĞ±½ÇºÍmoveStepDisµÄ±¶Êı¹ØÏµ
+	 * å€¾æ–œç³»æ•°è°ƒæ•´ï¼šå€¾æ–œè§’å’ŒmoveStepDisçš„å€æ•°å…³ç³»
 	 */
 	private float leanFactor = 0.5f;//
 	/**
-	 * Ã¿²½ÒÆ¶¯µÄ¾àÀë
+	 * æ¯æ­¥ç§»åŠ¨çš„è·ç¦»
 	 */
 	private int moveStepDis = 10;//
 	/**
-	 * Ã¿²½ÒÆ¶¯µÄÊ±¼ä¼ä¸ô
+	 * æ¯æ­¥ç§»åŠ¨çš„æ—¶é—´é—´éš”
 	 */
 	private int moveStepDuration = 30;//
 	
@@ -241,8 +419,8 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 	
 	
 	/**
-	 * µ÷ÕûÒÆ¶¯ËÙ¶È
-	 * @param leanFactor ÇãĞ±ÏµÊıµ÷Õû£ºÇãĞ±½ÇºÍmoveStepDisµÄ±¶Êı¹ØÏµ
+	 * è°ƒæ•´ç§»åŠ¨é€Ÿåº¦
+	 * @param leanFactor å€¾æ–œç³»æ•°è°ƒæ•´ï¼šå€¾æ–œè§’å’ŒmoveStepDisçš„å€æ•°å…³ç³»
 
 	 */
 	public void setLeanFactor(float leanFactor) {
@@ -250,7 +428,7 @@ public class OrientationSensorImageView extends ImageView implements SensorEvent
 	}
 	
 	/**
-	 * µ÷ÕûÒÆ¶¯Æ½»¬¶È
+	 * è°ƒæ•´ç§»åŠ¨å¹³æ»‘åº¦
 	 * @param moveStepDuration
 	 */
 	public void setMoveStepDuration(int moveStepDuration) {

@@ -1,14 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
+<com.taotao.mindpin_orientationsensorimageview.KCGravityScrollView 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:orientation="vertical" >
-    
-    <com.taotao.mindpin_orientationsensorimageview.OrientationSensorImageView 
-        android:id="@+id/sensorview"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:scaleType="fitCenter" 
-        android:src="@drawable/drawer_avatar_bg_default"/>
+    android:id="@+id/root"
+    ></com.taotao.mindpin_orientationsensorimageview.KCGravityScrollView>
+<!-- <HorizontalScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" > -->
 
-</LinearLayout>
+    <!-- <FrameLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent" >
+
+        <com.taotao.mindpin_orientationsensorimageview.OrientationSensorImageView
+            android:id="@+id/sensorview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:background="#aabbcc"
+            android:scaleType="fitCenter"
+            android:src="@drawable/qingmin" />
+        
+    </FrameLayout> -->
+
+<!-- </HorizontalScrollView> -->
